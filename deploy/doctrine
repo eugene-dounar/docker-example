@@ -1,0 +1,11 @@
+#!/bin/bash
+
+cd "$( dirname "${BASH_SOURCE[0]}" )"/..
+ROOT=`pwd`
+
+docker run -ti --rm \
+    -v $ROOT:/src:ro \
+    --link mp-database:database \
+    -w /src \
+    myproject/api \
+    vendor/bin/doctrine "$@"

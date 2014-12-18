@@ -1,0 +1,22 @@
+#!/bin/bash
+
+echo "Removing test containers..."
+docker kill \
+    mp-test-database \
+    mp-test-api \
+    mp-test-front \
+    mp-test-pubsub \
+    mp-test-webdriver \
+    mp-test-webdriver-chrome \
+    mp-test-phpspec \
+    mp-test-migration
+
+docker rm \
+    mp-test-database \
+    mp-test-api \
+    mp-test-front \
+    mp-test-pubsub \
+    mp-test-webdriver \
+    mp-test-webdriver-chrome \
+    mp-test-phpspec \
+    mp-test-migration

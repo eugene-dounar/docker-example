@@ -1,0 +1,71 @@
+#!/bin/bash
+
+cd "$( dirname "${BASH_SOURCE[0]}" )"/..
+ROOT=`pwd`
+
+echo -n "Cleaning up..."
+docker kill mp-database mp-migration mp-api mp-front mp-pubsub mp-webdriver mp-webdriver-chrome >/dev/null 2>&1
+docker rm mp-database mp-migration mp-api mp-front mp-pubsub mp-webdriver mp-webdriver-chrome >/dev/null 2>&1
+echo "done"
+
+set -e # fail on error
+
+echo -n "Checking if data container exists..."
+if ! docker inspect mp-database-data >/dev/null; then docker run --name mp-database-data postgres:9.3 echo 'Data container created'; fi
+echo "done"
+
+echo -n "Launching database container..."
+docker run -d --name mp-database \
+    --volumes-from mp-database-data \
+    -p 127.0.0.1:5432:5432 \
+    postgres:9.3 >/dev/null
+echo "done"
+
+echo "Setting up database..."
+docker run --rm --name mp-migration \
+    -v $ROOT:/src:ro \
+    --link mp-database:database \
+    -w /src \
+    myproject/api \
+    bin/database-setup
+
+echo -n "Launching PubSub container..."
+docker run -d --name mp-pubsub \
+    -v $ROOT/pubsub/pubsub.js:/src/pubsub.js:ro \
+    myproject/pubsub \
+    nodemon /src/pubsub.js >/dev/null
+echo "done"
+
+echo -n "Launching API container..."
+docker run -d --name mp-api \
+    -v $ROOT:/src:ro \
+    --link mp-database:database \
+    --link mp-pubsub:pubsub \
+    myproject/api >/dev/null
+echo "done"
+
+echo -n "Launching front container..."
+docker run -d --name mp-front \
+    -v $ROOT/front:/src:ro \
+    -v $ROOT/front/config:/etc/nginx:ro \
+    --link mp-api:fpm \
+    --link mp-pubsub:pubsub \
+    -p 127.0.0.1:8080:80 \
+    myproject/front >/dev/null
+echo "done"
+
+echo -n "Launching webdriver container..."
+docker run -d --name mp-webdriver \
+    selenium/hub:2.44.0 >/dev/null
+echo "done"
+
+echo -n "Launching chrome node container..."
+docker run -d --name mp-webdriver-chrome \
+    -p 5900:5900 \
+    -e "SCREEN_WIDTH=1440" \
+    -e "SCREEN_HEIGHT=800" \
+    -v $ROOT/features/files:/files/ \ # file uploads
+    --link mp-webdriver:hub \
+    --link mp-front:web \
+    selenium/node-chrome-debug:2.44.0 >/dev/null
+echo "done"

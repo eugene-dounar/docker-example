@@ -1,0 +1,27 @@
+#!/usr/bin/env php
+<?php
+
+// Wait for postgres to start
+passthru(__DIR__.'/wait');
+
+$c = require_once __DIR__ . '/../container.php';
+$em = $c->get('Doctrine\ORM\EntityManager');
+$conn = $em->getConnection();
+
+try {
+    $conn->getSchemaManager()->listTables();
+} catch(\PDOException $e) {
+    if ($e->getCode() !== 7) { throw $e; }
+    echo "No database found. Creating...\n";
+    $conn->getSchemaManager()->createDatabase($conn->getDatabase());
+}
+
+echo "Validating database schema...\n";
+$validator = new Doctrine\ORM\Tools\SchemaValidator($em);
+$validator->schemaInSyncWithMetadata();
+if (!$validator->schemaInSyncWithMetadata()) {
+    echo "Schema is not in sync. Updating...\n";
+    $metadatas = $em->getMetadataFactory()->getAllMetadata();
+    $tool = new Doctrine\ORM\Tools\SchemaTool($em);
+    $tool->updateSchema($metadatas);
+}

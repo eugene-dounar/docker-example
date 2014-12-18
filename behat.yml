@@ -1,0 +1,25 @@
+default:
+  gherkin:
+    filters:
+      tags: ~@backlog
+  suites:
+    domain: 
+      contexts: [ DomainContext ]
+    critical:
+      contexts:
+        - WebContext:
+          - http://webdriver:4444/wd/hub
+          - http://web
+        - ApiContext:
+          - http://web
+      filters:
+        tags: @critical
+debug:
+  suites:
+    critical:
+      contexts:
+        - WebContext:
+          - http://172.17.42.1:4444/wd/hub # selenium running on host
+          - http://localhost:8080
+        - ApiContext:
+          - http://web

@@ -1,0 +1,62 @@
+#!/bin/bash
+
+set -e # fail on error
+
+echo "Running unit tests"
+docker run --rm -t --name mp-test-phpspec \
+    -w /src \
+    myproject/api \
+    vendor/bin/phpspec run
+
+echo "Launching database container..."
+docker run -d --name mp-test-database postgres:9.3 > /dev/null
+
+echo "Migrating database..."
+docker run --rm --name mp-test-migration \
+    --link mp-test-database:database \
+    -w /src \
+    myproject/api \
+    bin/database-setup
+
+echo "Launching PubSub container"
+docker run -d --name mp-test-pubsub \
+    --restart=always \
+    myproject/pubsub
+
+echo "Launching API container..."
+docker run -d --name mp-test-api \
+    --link mp-test-database:database \
+    --link mp-test-pubsub:pubsub \
+    myproject/api > /dev/null
+
+echo "Launching front container..."
+docker run -d --name mp-test-front \
+    --link mp-test-api:fpm \
+    --link mp-test-pubsub:pubsub \
+    myproject/front > /dev/null
+
+echo -n "Launching webdriver container..."
+docker run -d --name mp-test-webdriver \
+    selenium/hub:2.44.0 >/dev/null
+echo "done"
+
+echo -n "Launching chrome node container..."
+docker run -d --name mp-test-webdriver-chrome \
+    --link mp-test-webdriver:hub \
+    --link mp-test-front:web \
+    selenium/node-chrome:2.44.0 >/dev/null
+# wait for container to start
+until docker logs mp-test-webdriver-chrome | grep "Registering the node to hub" >/dev/null
+do
+    echo -n "."
+    sleep 1
+done
+echo "done"
+
+docker run -t --rm \
+    --link mp-test-database:database \
+    --link mp-test-webdriver:webdriver \
+    --link mp-test-front:web \
+    -w /src \
+    myproject/api \
+    vendor/bin/behat

@@ -1,0 +1,12 @@
+#!/bin/bash
+set -e
+
+cd "$( dirname "${BASH_SOURCE[0]}" )"/../..
+composer.phar --ansi --ignore-platform-reqs install
+
+# reset filemtime so that docker can cache ADD/COPY
+find . -exec touch --date="01/01/2000 00:00:00" {} \;
+
+docker build -t myproject/pubsub ./pubsub
+docker build -t myproject/api .
+docker build -t myproject/front ./front

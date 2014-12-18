@@ -1,0 +1,41 @@
+#!/bin/bash
+
+echo "Killing running containers"
+docker stop mp-database mp-migration mp-api mp-pubsub mp-front >/dev/null 2>&1
+
+echo "Removing existing containers"
+docker rm mp-database mp-migration mp-api mp-pubsub mp-front >/dev/null 2>&1
+
+set -e #fail on error
+echo "Launching database container"
+docker run -d --name mp-database \
+    --volumes-from mp-database-data \
+    --restart=always \
+    postgres:9.3
+
+echo "Migrating database..."
+docker run --rm --name mp-migration \
+    --link mp-database:database \
+    -w /src \
+    myproject/api:latest \
+    bin/database-setup
+
+echo "Launching PubSub container"
+docker run -d --name mp-pubsub \
+    --restart=always \
+    myproject/pubsub:latest
+
+echo "Launching API container"
+docker run -d --name mp-api \
+    --link mp-database:database \
+    --link mp-pubsub:pubsub \
+    --restart=always \
+    myproject/api:latest
+
+echo "Launching front container"
+docker run -d --name mp-front \
+    --link mp-api:fpm \
+    --link mp-pubsub:pubsub \
+    -p 0.0.0.0:80:80 \
+    --restart=always \
+    myproject/front:latest

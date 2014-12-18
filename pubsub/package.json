@@ -1,0 +1,7 @@
+{
+  "name": "myproject-pubsub",
+  "dependencies": {
+    "socket.io": "^1.2.1",
+    "zmq": "^2.8.0"
+  }
+}
