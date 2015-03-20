@@ -9,3 +9,13 @@ Structure
 * `deploy` bash scripts to orchestrate the system
 * `pubsub` nodejs pubsub socket.io service
 * `front` js, css, html and front web server
+
+Run on OSX
+==============
+```sh
+vagrant up && vagrant rsync-auto
+```
+```sh
+`vagrant-provision/shell-init`
+docker ...
+```
