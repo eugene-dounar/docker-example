@@ -5,7 +5,7 @@ Vagrant.configure(2) do |config|
 
   config.vm.provider "virtualbox"
 
-  config.vm.network "forwarded_port", guest: 2375, host: 2375
+  config.vm.network "forwarded_port", guest: 2375, host_ip: "127.0.0.1", host: 2375
 
   config.vm.provision "docker"
 
